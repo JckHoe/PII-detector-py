@@ -95,6 +95,9 @@ class CombinedPIIDetector:
         
         merged_entities = self._merge_entities(all_entities)
         
+        detected_values = [entity.text for entity in merged_entities]
+        print(json.dumps(detected_values))
+        
         end_time = time.perf_counter()
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
