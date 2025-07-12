@@ -1,13 +1,19 @@
 import spacy
 import re
 import hashlib
+import os
 from typing import Dict, List, Tuple
 from spacy.matcher import Matcher
 
 class SpacyNERPIIDetector:
     def __init__(self, model_name: str = "en_core_web_sm"):
         try:
-            self.nlp = spacy.load(model_name)
+            # Check for bundled model path first
+            spacy_model_path = os.environ.get('SPACY_MODEL_PATH')
+            if spacy_model_path and os.path.exists(spacy_model_path):
+                self.nlp = spacy.load(spacy_model_path)
+            else:
+                self.nlp = spacy.load(model_name)
         except OSError:
             print(f"Model {model_name} not found. Please install with: python -m spacy download {model_name}")
             raise
@@ -170,6 +176,16 @@ class SpacyNERPIIDetector:
             
             anonymized_text = anonymized_text[:start] + anonymized + anonymized_text[end:]
             mapping[anonymized] = original
+        
+        end_time = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        
+        self.last_anonymize_metrics = Metrics(
+            execution_time=end_time - start_time,
+            memory_peak_mb=peak / 1024 / 1024,
+            memory_current_mb=current / 1024 / 1024
+        )
         
         return anonymized_text, mapping
 

@@ -1,6 +1,13 @@
 import re
 import hashlib
-from typing import Dict, List, Tuple
+import time
+import tracemalloc
+from typing import Dict, List, Tuple, NamedTuple
+
+class Metrics(NamedTuple):
+    execution_time: float
+    memory_peak_mb: float
+    memory_current_mb: float
 
 class RegexPIIDetector:
     def __init__(self):
@@ -16,6 +23,9 @@ class RegexPIIDetector:
         }
     
     def detect_pii(self, text: str) -> Dict[str, List[Tuple[str, int, int]]]:
+        tracemalloc.start()
+        start_time = time.perf_counter()
+        
         results = {}
         
         for pii_type, pattern in self.patterns.items():
@@ -25,9 +35,22 @@ class RegexPIIDetector:
             if matches:
                 results[pii_type] = matches
         
+        end_time = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        
+        self.last_metrics = Metrics(
+            execution_time=end_time - start_time,
+            memory_peak_mb=peak / 1024 / 1024,
+            memory_current_mb=current / 1024 / 1024
+        )
+        
         return results
     
     def anonymize_text(self, text: str, replacement_strategy: str = 'hash') -> Tuple[str, Dict]:
+        tracemalloc.start()
+        start_time = time.perf_counter()
+        
         anonymized_text = text
         mapping = {}
         
@@ -53,6 +76,16 @@ class RegexPIIDetector:
                 anonymized_text = anonymized_text.replace(original_value, anonymized)
                 mapping[anonymized] = original_value
         
+        end_time = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        
+        self.last_anonymize_metrics = Metrics(
+            execution_time=end_time - start_time,
+            memory_peak_mb=peak / 1024 / 1024,
+            memory_current_mb=current / 1024 / 1024
+        )
+        
         return anonymized_text, mapping
 
 def demo_regex_detection():
@@ -74,6 +107,11 @@ def demo_regex_detection():
     for pii_type, matches in pii_found.items():
         print(f"{pii_type}: {[match[0] for match in matches]}")
     
+    print(f"\nDetection Metrics:")
+    print(f"Time: {detector.last_metrics.execution_time:.4f} seconds")
+    print(f"Memory Peak: {detector.last_metrics.memory_peak_mb:.2f} MB")
+    print(f"Memory Current: {detector.last_metrics.memory_current_mb:.2f} MB")
+    
     print("\n" + "="*50)
     
     strategies = ['hash', 'placeholder', 'partial']
@@ -81,6 +119,9 @@ def demo_regex_detection():
         anonymized, mapping = detector.anonymize_text(sample_text, strategy)
         print(f"\nAnonymized text ({strategy} strategy):")
         print(anonymized)
+        print(f"Anonymization Metrics ({strategy}):")
+        print(f"  Time: {detector.last_anonymize_metrics.execution_time:.4f}s")
+        print(f"  Memory Peak: {detector.last_anonymize_metrics.memory_peak_mb:.2f} MB")
 
 if __name__ == "__main__":
     demo_regex_detection()
