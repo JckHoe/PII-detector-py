@@ -2,20 +2,16 @@ import spacy
 import re
 import hashlib
 import os
+import sys
 from typing import Dict, List, Tuple
 from spacy.matcher import Matcher
 
 class SpacyNERPIIDetector:
     def __init__(self, model_name: str = "en_core_web_trf"):
         try:
-            # Check for bundled model path first
-            spacy_model_path = os.environ.get('SPACY_MODEL_PATH')
-            if spacy_model_path and os.path.exists(spacy_model_path):
-                self.nlp = spacy.load(spacy_model_path)
-            else:
-                self.nlp = spacy.load(model_name)
+            self.nlp = spacy.load("/Users/juster/Project/playground/pii_detector/extracted_model/en_core_web_trf/en_core_web_trf-3.8.0")
         except OSError:
-            print(f"Model {model_name} not found. Please install with: python -m spacy download {model_name}")
+            print(f"Model not found at /Users/juster/Project/playground/pii_detector/en_core_web_trf-3.8.0-py3-none-any.whl")
             raise
         
         self.matcher = Matcher(self.nlp.vocab)
