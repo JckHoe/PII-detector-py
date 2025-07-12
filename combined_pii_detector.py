@@ -1,5 +1,7 @@
 import json
-from typing import Dict, List, Optional, Union
+import time
+import tracemalloc
+from typing import Dict, List, Optional, Union, NamedTuple
 from dataclasses import dataclass
 import hashlib
 
@@ -17,6 +19,11 @@ try:
 except ImportError:
     SPACY_AVAILABLE = False
     print("spaCy not available. Install with: pip install spacy && python -m spacy download en_core_web_sm")
+
+class Metrics(NamedTuple):
+    execution_time: float
+    memory_peak_mb: float
+    memory_current_mb: float
 
 @dataclass
 class PIIEntity:
@@ -44,6 +51,9 @@ class CombinedPIIDetector:
         print(f"Initialized detectors: {list(self.detectors.keys())}")
     
     def detect_pii(self, text: str) -> List[PIIEntity]:
+        tracemalloc.start()
+        start_time = time.perf_counter()
+        
         all_entities = []
         
         if 'regex' in self.detectors:
@@ -83,7 +93,22 @@ class CombinedPIIDetector:
                     source='spacy'
                 ))
         
-        return self._merge_entities(all_entities)
+        merged_entities = self._merge_entities(all_entities)
+        
+        detected_values = [entity.text for entity in merged_entities]
+        print(json.dumps(detected_values))
+        
+        end_time = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        
+        self.last_detection_metrics = Metrics(
+            execution_time=end_time - start_time,
+            memory_peak_mb=peak / 1024 / 1024,
+            memory_current_mb=current / 1024 / 1024
+        )
+        
+        return merged_entities
     
     def _merge_entities(self, entities: List[PIIEntity]) -> List[PIIEntity]:
         if not entities:
@@ -124,6 +149,9 @@ class CombinedPIIDetector:
         return merged
     
     def anonymize_text(self, text: str, strategy: str = 'adaptive') -> Dict:
+        tracemalloc.start()
+        start_time = time.perf_counter()
+        
         entities = self.detect_pii(text)
         anonymized_text = text
         mapping = {}
@@ -157,12 +185,26 @@ class CombinedPIIDetector:
             
             mapping[original] = anonymized
         
+        end_time = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        
+        self.last_anonymize_metrics = Metrics(
+            execution_time=end_time - start_time,
+            memory_peak_mb=peak / 1024 / 1024,
+            memory_current_mb=current / 1024 / 1024
+        )
+        
         return {
             'original_text': text,
             'anonymized_text': anonymized_text,
             'entities': entities,
             'mapping': mapping,
-            'stats': self._get_stats(entities)
+            'stats': self._get_stats(entities),
+            'metrics': {
+                'detection': self.last_detection_metrics._asdict(),
+                'anonymization': self.last_anonymize_metrics._asdict()
+            }
         }
     
     def _adaptive_anonymization(self, entity: PIIEntity) -> str:
@@ -307,6 +349,11 @@ def demo_combined_detection():
         print(f"- {entity.entity_type}: '{entity.text}' "
               f"(confidence: {entity.confidence:.2f}, source: {entity.source})")
     
+    print(f"\nDetection Metrics:")
+    print(f"Time: {detector.last_detection_metrics.execution_time:.4f} seconds")
+    print(f"Memory Peak: {detector.last_detection_metrics.memory_peak_mb:.2f} MB")
+    print(f"Memory Current: {detector.last_detection_metrics.memory_current_mb:.2f} MB")
+    
     print("\n" + "="*60)
     
     strategies = ['adaptive', 'hash', 'placeholder', 'mask']
@@ -314,6 +361,9 @@ def demo_combined_detection():
         results = detector.anonymize_text(sample_text, strategy)
         print(f"\nAnonymized text ({strategy} strategy):")
         print(results['anonymized_text'][:200] + "..." if len(results['anonymized_text']) > 200 else results['anonymized_text'])
+        print(f"Anonymization Metrics ({strategy}):")
+        print(f"  Time: {results['metrics']['anonymization']['execution_time']:.4f}s")
+        print(f"  Memory Peak: {results['metrics']['anonymization']['memory_peak_mb']:.2f} MB")
     
     print("\n" + "="*60)
     

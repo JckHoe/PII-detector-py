@@ -2,7 +2,14 @@ from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 import hashlib
-from typing import Dict, List
+import time
+import tracemalloc
+from typing import Dict, List, NamedTuple
+
+class Metrics(NamedTuple):
+    execution_time: float
+    memory_peak_mb: float
+    memory_current_mb: float
 
 class PresidioPIIDetector:
     def __init__(self):
@@ -17,6 +24,9 @@ class PresidioPIIDetector:
         ]
     
     def detect_pii(self, text: str, language: str = "en") -> List[Dict]:
+        tracemalloc.start()
+        start_time = time.perf_counter()
+        
         results = self.analyzer.analyze(
             text=text,
             entities=self.entity_types,
@@ -33,9 +43,22 @@ class PresidioPIIDetector:
                 'confidence': result.score
             })
         
+        end_time = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        
+        self.last_metrics = Metrics(
+            execution_time=end_time - start_time,
+            memory_peak_mb=peak / 1024 / 1024,
+            memory_current_mb=current / 1024 / 1024
+        )
+        
         return pii_found
     
     def anonymize_text(self, text: str, strategy: str = "replace", language: str = "en") -> Dict:
+        tracemalloc.start()
+        start_time = time.perf_counter()
+        
         analyzer_results = self.analyzer.analyze(
             text=text,
             entities=self.entity_types,
@@ -65,6 +88,16 @@ class PresidioPIIDetector:
             text=text,
             analyzer_results=analyzer_results,
             operators=operators
+        )
+        
+        end_time = time.perf_counter()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        
+        self.last_anonymize_metrics = Metrics(
+            execution_time=end_time - start_time,
+            memory_peak_mb=peak / 1024 / 1024,
+            memory_current_mb=current / 1024 / 1024
         )
         
         return {
@@ -113,6 +146,11 @@ def demo_presidio_detection():
         for pii in detected_pii:
             print(f"- {pii['entity_type']}: '{pii['text']}' (confidence: {pii['confidence']:.2f})")
         
+        print(f"\nDetection Metrics:")
+        print(f"Time: {detector.last_metrics.execution_time:.4f} seconds")
+        print(f"Memory Peak: {detector.last_metrics.memory_peak_mb:.2f} MB")
+        print(f"Memory Current: {detector.last_metrics.memory_current_mb:.2f} MB")
+        
         print("\n" + "="*60)
         
         strategies = ['replace', 'redact', 'hash', 'mask', 'custom']
@@ -120,6 +158,9 @@ def demo_presidio_detection():
             result = detector.anonymize_text(sample_text, strategy)
             print(f"\nAnonymized text ({strategy} strategy):")
             print(result['anonymized_text'])
+            print(f"Anonymization Metrics ({strategy}):")
+            print(f"  Time: {detector.last_anonymize_metrics.execution_time:.4f}s")
+            print(f"  Memory Peak: {detector.last_anonymize_metrics.memory_peak_mb:.2f} MB")
         
         print("\n" + "="*60)
         
