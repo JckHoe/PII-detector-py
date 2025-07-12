@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 from spacy.matcher import Matcher
 
 class SpacyNERPIIDetector:
-    def __init__(self, model_name: str = "en_core_web_sm"):
+    def __init__(self, model_name: str = "en_core_web_trf"):
         try:
             # Check for bundled model path first
             spacy_model_path = os.environ.get('SPACY_MODEL_PATH')
