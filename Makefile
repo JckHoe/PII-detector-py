@@ -1,2 +1,2 @@
 run:
-	uv run -i pii_cli.py
+	uv run pii_cli.py --interactive

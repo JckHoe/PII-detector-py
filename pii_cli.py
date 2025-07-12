@@ -71,6 +71,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Output file (default: stdout)"
     )
     
+    parser.add_argument(
+        "--interactive", 
+        action="store_true",
+        help="Interactive mode - continuously read from stdin"
+    )
+    
     return parser
 
 def setup_detector(detectors: str, quiet: bool = False) -> CombinedPIIDetector:
@@ -131,12 +137,41 @@ def process_text(
     else:
         return results["anonymized_text"]
 
+def interactive_mode(detector: CombinedPIIDetector, args):
+    """Interactive mode - continuously read from stdin and output results"""
+    if not args.quiet:
+        print("Interactive PII Detection Mode. Enter text (Ctrl+C to exit):", file=sys.stderr)
+    
+    try:
+        while True:
+            try:
+                line = input()
+                if line.strip():
+                    result = process_text(
+                        line,
+                        detector,
+                        args.strategy,
+                        args.json,
+                        args.metrics
+                    )
+                    print(result)
+                    sys.stdout.flush()
+            except EOFError:
+                break
+    except KeyboardInterrupt:
+        if not args.quiet:
+            print("\nExiting interactive mode", file=sys.stderr)
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
     
     try:
         detector = setup_detector(args.detectors, args.quiet)
+        
+        if args.interactive:
+            interactive_mode(detector, args)
+            return 0
         
         if args.input:
             with open(args.input, 'r', encoding='utf-8') as f:
