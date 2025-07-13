@@ -36,7 +36,7 @@ class PIIEntity:
     anonymized_value: Optional[str] = None
 
 class CombinedPIIDetector:
-    def __init__(self, use_regex: bool = True, use_presidio: bool = True, use_spacy: bool = True):
+    def __init__(self, use_regex: bool = True, use_presidio: bool = True, use_spacy: bool = True, spacy_model_path: str = None):
         self.detectors = {}
         
         if use_regex:
@@ -46,7 +46,7 @@ class CombinedPIIDetector:
             self.detectors['presidio'] = PresidioPIIDetector()
         
         if use_spacy and SPACY_AVAILABLE:
-            self.detectors['spacy'] = SpacyNERPIIDetector()
+            self.detectors['spacy'] = SpacyNERPIIDetector(model_path=spacy_model_path)
         
         print(f"Initialized detectors: {list(self.detectors.keys())}")
     

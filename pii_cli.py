@@ -8,17 +8,6 @@ from typing import Optional
 
 import os
 
-def setup_spacy_model_path():
-    """Setup spaCy model path for bundled binary"""
-    if getattr(sys, 'frozen', False):
-        bundle_dir = sys._MEIPASS
-        model_path = os.path.join(bundle_dir, 'en_core_web_sm')
-        if os.path.exists(model_path):
-            os.environ['SPACY_MODEL_PATH'] = model_path
-            print(f"Using bundled spaCy model: {model_path}", file=sys.stderr)
-    
-setup_spacy_model_path()
-
 from combined_pii_detector import CombinedPIIDetector
 
 def create_parser() -> argparse.ArgumentParser:
@@ -77,9 +66,15 @@ def create_parser() -> argparse.ArgumentParser:
         help="Interactive mode - continuously read from stdin"
     )
     
+    parser.add_argument(
+        "--local-model-path",
+        type=str,
+        help="Path to local spaCy model directory (overrides bundled model)"
+    )
+    
     return parser
 
-def setup_detector(detectors: str, quiet: bool = False) -> CombinedPIIDetector:
+def setup_detector(detectors: str, quiet: bool = False, local_model_path: str = None) -> CombinedPIIDetector:
     if detectors == "all":
         use_regex = use_presidio = use_spacy = True
     else:
@@ -95,7 +90,8 @@ def setup_detector(detectors: str, quiet: bool = False) -> CombinedPIIDetector:
         detector = CombinedPIIDetector(
             use_regex=use_regex,
             use_presidio=use_presidio,
-            use_spacy=use_spacy
+            use_spacy=use_spacy,
+            spacy_model_path=local_model_path
         )
     
     return detector
@@ -167,7 +163,7 @@ def main():
     args = parser.parse_args()
     
     try:
-        detector = setup_detector(args.detectors, args.quiet)
+        detector = setup_detector(args.detectors, args.quiet, args.local_model_path)
         
         if args.interactive:
             interactive_mode(detector, args)

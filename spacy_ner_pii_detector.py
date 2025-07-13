@@ -7,13 +7,17 @@ from typing import Dict, List, Tuple
 from spacy.matcher import Matcher
 
 class SpacyNERPIIDetector:
-    def __init__(self, model_name: str = "en_core_web_trf"):
-        try:
-            self.nlp = spacy.load("/Users/juster/Project/playground/pii_detector/extracted_model/en_core_web_trf/en_core_web_trf-3.8.0")
-        except OSError:
-            print(f"Model not found at /Users/juster/Project/playground/pii_detector/en_core_web_trf-3.8.0-py3-none-any.whl")
-            raise
+    def __init__(self, model_name: str = "en_core_web_trf", model_path: str = None):
+        self.model_name = model_name
+        self.model_path = model_path
         
+        self.nlp = spacy.load(model_path)
+        print(f"Loaded spaCy model from: {model_path}")
+        
+        if self.nlp is None:
+            raise OSError(f"Could not load spaCy model. Tried locations: {model_locations}")
+        
+        # Initialize matcher and patterns after model is loaded
         self.matcher = Matcher(self.nlp.vocab)
         self._setup_custom_patterns()
         
