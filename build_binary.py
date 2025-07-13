@@ -15,35 +15,8 @@ def install_pyinstaller():
         print("Installing PyInstaller...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
 
-def find_spacy_model():
-    """Find spaCy model with better error handling"""
-    model_candidates = [
-        "en_core_web_trf",
-        "en_core_web_sm", 
-        "en_core_web_md",
-        "en_core_web_lg"
-    ]
-    
-    for model_name in model_candidates:
-        try:
-            result = subprocess.run([
-                sys.executable, "-c", 
-                f"import {model_name}; print({model_name}.__file__)"
-            ], capture_output=True, text=True, check=True)
-            model_path = Path(result.stdout.strip()).parent
-            print(f"Found spaCy model '{model_name}' at: {model_path}")
-            return model_path, model_name
-        except subprocess.CalledProcessError:
-            continue
-    
-    print("Warning: No spaCy model found. Install with: python -m spacy download en_core_web_trf")
-    return None, None
-
 def build_binary():
     current_dir = Path(__file__).parent
-    
-    # Find spaCy model path
-    model_path, model_name = find_spacy_model()
     
     # Get platform-specific binary name
     system = platform.system().lower()
@@ -67,6 +40,7 @@ def build_binary():
         f"--workpath={current_dir}/build",
         f"--specpath={current_dir}",
         "--hidden-import=spacy",
+        "--hidden-import=spacy_curated_transformers",
         "--hidden-import=presidio_analyzer",
         "--hidden-import=presidio_anonymizer", 
         "--hidden-import=regex_pii_detector",
@@ -74,6 +48,7 @@ def build_binary():
         "--hidden-import=spacy_ner_pii_detector",
         "--hidden-import=combined_pii_detector",
         "--collect-data=spacy",
+        "--collect-data=spacy_curated_transformers",
         "--collect-data=presidio_analyzer",
         "--collect-data=presidio_anonymizer",
         # Optimize binary size
@@ -84,11 +59,6 @@ def build_binary():
         "--exclude-module=notebook",
         str(current_dir / "pii_cli.py")
     ]
-    
-    # Add spaCy model data if found
-    if model_path and model_name:
-        pyinstaller_args.insert(-1, f"--hidden-import={model_name}")
-        pyinstaller_args.insert(-1, f"--add-data={model_path}:{model_name}")
     
     print("Building binary with PyInstaller...")
     print(f"Command: {' '.join(pyinstaller_args)}")
