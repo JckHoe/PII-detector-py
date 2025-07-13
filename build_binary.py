@@ -6,6 +6,7 @@ import subprocess
 import shutil
 import platform
 from pathlib import Path
+from typing import Optional
 
 def install_pyinstaller():
     try:
@@ -15,9 +16,23 @@ def install_pyinstaller():
         print("Installing PyInstaller...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
 
+def get_embedded_model_path() -> Optional[str]:
+    try:
+        base_dir = Path(sys._MEIPASS)
+    except AttributeError:
+        base_dir = Path(__file__).parent
+    model_dir = base_dir / "en_core_web_trf"
+    return str(model_dir) if model_dir.exists() else None
+
 def build_binary():
-    current_dir = Path(__file__).parent
+    current_dir = Path(__file__).parent.resolve()
+    model_dir = current_dir / "extracted_model" / "en_core_web_trf" / "en_core_web_trf-3.8.0"
     
+    if not model_dir.exists():
+        print(f"Error: spaCy model not found at {model_dir}")
+        print("Please run: python -m spacy download en_core_web_trf && python -m spacy package en_core_web_trf extracted_model --force")
+        return None
+
     # Get platform-specific binary name
     system = platform.system().lower()
     arch = platform.machine().lower()
@@ -25,11 +40,11 @@ def build_binary():
         arch = 'amd64'
     elif arch in ['aarch64', 'arm64']:
         arch = 'arm64'
-    
+
     binary_name = f"pii-cli-{system}-{arch}"
     if system == "windows":
         binary_name += ".exe"
-    
+
     pyinstaller_args = [
         "pyinstaller",
         "--onefile",
@@ -51,6 +66,7 @@ def build_binary():
         "--collect-data=spacy_curated_transformers",
         "--collect-data=presidio_analyzer",
         "--collect-data=presidio_anonymizer",
+        f"--add-data={model_dir}:{'en_core_web_trf'}",  # Embed the model folder under this name
         # Optimize binary size
         "--exclude-module=tkinter",
         "--exclude-module=matplotlib",
@@ -59,39 +75,37 @@ def build_binary():
         "--exclude-module=notebook",
         str(current_dir / "pii_cli.py")
     ]
-    
+
     print("Building binary with PyInstaller...")
     print(f"Command: {' '.join(pyinstaller_args)}")
-    
+
     try:
         result = subprocess.run(pyinstaller_args, check=True, capture_output=True, text=True)
         print("Build successful!")
-        
+
         binary_path = current_dir / "dist" / binary_name
         if binary_path.exists():
             size_mb = binary_path.stat().st_size / (1024 * 1024)
             print(f"Binary created: {binary_path}")
             print(f"Size: {size_mb:.1f} MB")
             print(f"Platform: {system}-{arch}")
-            
+
             if system != "windows":
                 os.chmod(binary_path, 0o755)
                 print("Made binary executable")
-            
-            # Test the binary
+
             print("Testing binary...")
-            test_result = subprocess.run([str(binary_path), "--help"], 
-                                       capture_output=True, text=True, timeout=30)
+            test_result = subprocess.run([str(binary_path), "--help"], capture_output=True, text=True, timeout=30)
             if test_result.returncode == 0:
                 print("Binary test passed!")
             else:
                 print(f"Binary test failed: {test_result.stderr}")
-            
+
             return binary_path
         else:
             print("Error: Binary not found after build")
             return None
-            
+
     except subprocess.CalledProcessError as e:
         print(f"Build failed: {e}")
         print(f"Error output: {e.stderr}")
@@ -101,6 +115,7 @@ def build_binary():
     except subprocess.TimeoutExpired:
         print("Binary test timed out")
         return binary_path if 'binary_path' in locals() else None
+
 
 def create_spec_file():
     spec_content = """
