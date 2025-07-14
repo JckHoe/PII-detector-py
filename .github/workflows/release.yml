@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Tag to create release for'
         required: true
-        default: 'v0.1.0'
+        default: 'v0.1.1'
 
 jobs:
   build:
@@ -19,9 +19,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - os: ubuntu-latest
-          #   platform: linux-amd64
-          #   python-version: '3.11'
+          - os: ubuntu-latest
+            platform: linux-amd64
+            python-version: '3.12'
           - os: windows-latest
             platform: windows-amd64
             python-version: '3.12'
