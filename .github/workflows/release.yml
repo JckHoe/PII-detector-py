@@ -19,18 +19,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: linux-amd64
-            python-version: '3.11'
+          # - os: ubuntu-latest
+          #   platform: linux-amd64
+          #   python-version: '3.11'
           - os: windows-latest
             platform: windows-amd64
-            python-version: '3.11'
+            python-version: '3.12'
           - os: macos-latest
             platform: darwin-amd64
-            python-version: '3.11'
+            python-version: '3.12'
           - os: macos-14
             platform: darwin-arm64
-            python-version: '3.11'
+            python-version: '3.12'
 
     steps:
     - name: Checkout code
