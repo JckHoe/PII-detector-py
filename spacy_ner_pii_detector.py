@@ -1,8 +1,7 @@
+from pathlib import Path
 import spacy
 import re
 import hashlib
-import os
-import sys
 from typing import Dict, List, Tuple
 from spacy.matcher import Matcher
 
@@ -11,13 +10,9 @@ class SpacyNERPIIDetector:
         self.model_name = model_name
         self.model_path = model_path
         
-        self.nlp = spacy.load(model_path)
+        self.nlp = spacy.load(Path(model_path))
         print(f"Loaded spaCy model from: {model_path}")
         
-        if self.nlp is None:
-            raise OSError(f"Could not load spaCy model. Tried locations: {model_locations}")
-        
-        # Initialize matcher and patterns after model is loaded
         self.matcher = Matcher(self.nlp.vocab)
         self._setup_custom_patterns()
         
