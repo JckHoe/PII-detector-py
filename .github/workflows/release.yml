@@ -55,7 +55,6 @@ jobs:
     - name: Install dependencies
       run: |
         uv sync
-        uv run python -m spacy download en_core_web_trf
       shell: bash
 
     - name: Build binary
@@ -130,16 +129,9 @@ jobs:
              ./pii-cli-* --help
              ```
           
-          ### Usage Example
-          ```bash
-          echo "Contact John at john@email.com" | ./pii-cli-* --strategy adaptive
-          ```
-          
           ### Features
           - Regex-based PII detection
-          - Presidio-powered entity recognition
           - spaCy transformer model for advanced NLP
-          - Multiple anonymization strategies
           - Interactive and batch processing modes
         files: release-assets/*
         draft: false
