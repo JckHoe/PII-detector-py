@@ -44,18 +44,23 @@ def main():
     ]
     
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("Starting PyInstaller build (this may take several minutes)...")
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=1200)
         print("Build successful!")
-        print(f"Executable created: dist/pii-detector")
+        print(f"Executable created: dist/{binary_name}")
         
         if os.name != 'nt':
-            executable_path = "dist/pii-detector"
+            executable_path = f"dist/{binary_name}"
             if os.path.exists(executable_path):
                 os.chmod(executable_path, 0o755)
                 print(f"Made {executable_path} executable")
         
         return True
         
+    except subprocess.TimeoutExpired:
+        print("Build timed out after 5 minutes. This may indicate a hanging process.")
+        print("Try running the build command manually to see the full output.")
+        return False
     except subprocess.CalledProcessError as e:
         print(f"Build failed: {e}")
         print(f"Error output: {e.stderr}")
