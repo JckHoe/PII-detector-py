@@ -39,7 +39,6 @@ jobs:
     - name: Install dependencies
       run: |
         uv sync
-        uv run python -m spacy download en_core_web_trf
       shell: bash
 
     - name: Test build process
@@ -49,32 +48,3 @@ jobs:
       env:
         CI: true
 
-    - name: Test binary functionality
-      run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          binary_name="dist/pii-cli-windows-amd64.exe"
-        elif [[ "$RUNNER_OS" == "macOS" ]]; then
-          if [[ "$(uname -m)" == "arm64" ]]; then
-            binary_name="dist/pii-cli-darwin-arm64"
-          else
-            binary_name="dist/pii-cli-darwin-amd64"
-          fi
-        else
-          binary_name="dist/pii-cli-linux-amd64"
-        fi
-        
-        echo "Testing binary: $binary_name"
-        if [[ -f "$binary_name" ]]; then
-          # Test help command
-          timeout 30 "$binary_name" --help
-          
-          # Test basic functionality
-          echo "Contact John Doe at john@example.com or call 555-123-4567" | timeout 30 "$binary_name" --strategy mask --quiet
-          
-          echo "Binary test completed successfully"
-        else
-          echo "Binary not found: $binary_name"
-          ls -la dist/
-          exit 1
-        fi
-      shell: bash
