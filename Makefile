@@ -6,7 +6,10 @@ install-model:
 	curl -L -o en_core_web_trf-3.8.0-py3-none-any.whl https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.8.0/en_core_web_trf-3.8.0-py3-none-any.whl
 	unzip -o en_core_web_trf-3.8.0-py3-none-any.whl -d extracted_model
 
-run-local: install-model
+run-server:
+	uv run pii_server.py --local-model-path $(MODEL_PATH)
+
+run-local:
 	uv run pii_cli.py --local-model-path $(MODEL_PATH)
 
 build-binary:
