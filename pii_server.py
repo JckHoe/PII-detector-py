@@ -1,25 +1,26 @@
 import json
-import time
+import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from spacy_detector import SpacyNERPIIDetector
 
 class Model:
     def __init__(self):
         self.is_loaded = False
-        self.model_name = "FakeModel-v1.0"
+        self.model_path = os.getenv("SPACY_MODEL_PATH", "extracted_model/en_core_web_trf/en_core_web_trf-3.8.0")
 
     def load(self):
-        print(f"Loading {self.model_name}...")
-        time.sleep(1)  # Simulate model loading
+        print(f"Loading {self.model_path}...")
         self.is_loaded = True
-        print(f"{self.model_name} loaded successfully!")
+        detector = SpacyNERPIIDetector(model_path=self.model_path)
+        self.detector = detector
+        print(f"{self.model_path} loaded successfully!")
 
     def infer(self, input_text):
         if not self.is_loaded:
             raise RuntimeError("Model not loaded")
-
         print(f"Processing inference: {input_text}")
-        time.sleep(0.1)  # Simulate inference time
-        return f"Processed: {input_text}"
+        result = self.detector.detect_pii_combined(input_text)
+        return result
 
 model = Model()
 
